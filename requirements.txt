@@ -1,0 +1,11 @@
+# Python dependencies for arcgis_riverobstacles
+# Install inside the ArcGIS Python environment:
+#
+#   conda install --file requirements.txt -c conda-forge -y
+#
+# arcpy is NOT listed here because it is already present in the
+# ArcGIS Pro / ArcGIS Server conda environment.
+
+# Webhook handler (Option D only)
+flask>=2.3
+waitress>=3.0

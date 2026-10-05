@@ -1,0 +1,19 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local virtual environments
+.venv/
+venv/
+env/
+
+# Local ArcGIS/Webhook config containing secrets
+config.py
+
+# VS Code local settings
+.vscode/
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db

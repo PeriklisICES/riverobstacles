@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xml:lang="en">
+	<Esri>
+		<CreaDate>20260624</CreaDate>
+		<CreaTime>09193300</CreaTime>
+		<ArcGISFormat>1.0</ArcGISFormat>
+		<SyncOnce>TRUE</SyncOnce>
+		<ModDate>20260811</ModDate>
+		<ModTime>120000</ModTime>
+	</Esri>
+	<tool name="IdentifyFirstBarriers" displayname="Identify First Barriers" toolboxalias="riverobstacles">
+		<arcToolboxHelpPath>c:\program files\arcgis\pro\Resources\Help\gp</arcToolboxHelpPath>
+		<parameters>
+			<param name="river_network" displayname="River Network (polyline)" type="Required" direction="Input" datatype="Feature Layer" expression="river_network">
+				<dialogReference>&lt;p&gt;The polyline feature class or layer representing the
+                    digital river network. Each feature must represent one river reach with a unique
+                    identifier. Reach geometry is used to derive network topology (which reach
+                    connects to which) unless &lt;i&gt;Topology Source&lt;/i&gt; is set to
+                    &lt;b&gt;fields&lt;/b&gt;.&lt;/p&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;The polyline feature class or layer representing the
+                    digital river network.&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="reach_id_field" displayname="Reach ID Field" type="Required" direction="Input" datatype="Field" expression="reach_id_field">
+				<dialogReference>&lt;p&gt;The field in the river network feature class that uniquely
+                    identifies each reach. Values are treated as strings for matching, so integer
+                    and text fields are both supported.&lt;/p&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;Field that uniquely identifies each reach.&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="barriers" displayname="Barriers (point)" type="Required" direction="Input" datatype="Feature Layer" expression="barriers">
+				<dialogReference>&lt;p&gt;The point feature class or layer representing barriers
+                    (dams, weirs, culverts) on the river network. Each barrier must have a unique
+                    identifier field. Barriers are snapped to the nearest river reach vertex within
+                    the specified snap distance.&lt;/p&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;The point feature class or layer representing barriers on
+                    the river network.&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="barrier_id_field" displayname="Barrier ID Field" type="Required" direction="Input" datatype="Field" expression="barrier_id_field">
+				<dialogReference>&lt;p&gt;The field in the barriers feature class that uniquely
+                    identifies each barrier.&lt;/p&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;Field that uniquely identifies each barrier.&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="passability_field" displayname="Passability Field" type="Optional" direction="Input" datatype="Field" expression="{passability_field}">
+				<dialogReference>&lt;p&gt;Optional. A field in the barriers feature class that
+                    records whether each barrier is passable. When specified, only barriers where
+                    this field equals the &lt;i&gt;Impassable Field Value&lt;/i&gt; are included in
+                    the analysis. Barriers where the field does not match are treated as passable
+                    and ignored. If left empty, all barriers are treated as impassable.&lt;/p&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;Optional field indicating barrier passability. Only
+                    barriers matching the impassable value are included.&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="impassable_value" displayname="Impassable Field Value" type="Optional" direction="Input" datatype="String" expression="{impassable_value}">
+				<dialogReference>&lt;p&gt;The value in the &lt;i&gt;Passability Field&lt;/i&gt; that
+                    marks a barrier as impassable. Values &lt;b&gt;False&lt;/b&gt;,
+                    &lt;b&gt;0&lt;/b&gt; and &lt;b&gt;No&lt;/b&gt; are treated as boolean False;
+                    &lt;b&gt;True&lt;/b&gt;, &lt;b&gt;1&lt;/b&gt; and &lt;b&gt;Yes&lt;/b&gt; as
+                    boolean True. Any other value is matched as a string or number. Ignored when no
+                    Passability Field is set.&lt;/p&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;The value in the passability field that indicates a
+                    barrier is impassable.&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="snap_distance" displayname="Barrier Snap Distance (map units)" type="Required" direction="Input" datatype="Double" expression="snap_distance">
+				<dialogReference>&lt;p&gt;The maximum distance in map units within which a barrier
+                    point is snapped to the nearest river reach vertex. Barriers beyond this
+                    distance from any reach are excluded from the analysis. Increase this value if
+                    barriers are slightly offset from the network; reduce it to avoid incorrectly
+                    assigning barriers to the wrong reach.&lt;/p&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;Maximum distance to snap a barrier to the nearest river
+                    reach vertex.&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="vertex_density" displayname="Vertex Density (map units)" type="Required" direction="Input" datatype="Double" expression="vertex_density">
+				<dialogReference>&lt;p&gt;The maximum spacing between densified vertices along each
+                    river reach, in map units. Before snapping, reaches are densified so that
+                    barrier points can be assigned to a precise position along the line rather than
+                    just to the nearest original vertex. Smaller values give more precise snapping
+                    but increase processing time.&lt;/p&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;Maximum spacing between densified vertices before snapping
+                    barriers.&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="topology_source" displayname="Topology Source" type="Required" direction="Input" datatype="String" expression="topology_source">
+				<dialogReference>&lt;p&gt;Specifies how network topology (upstream/downstream
+                    connectivity) is
+                    derived.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;b&gt;geometry&lt;/b&gt; — Topology is
+                    derived automatically from polyline endpoints. The start point of each reach is
+                    matched to the end point of the downstream reach. Recommended for most
+                    datasets.&lt;/li&gt;&lt;li&gt;&lt;b&gt;fields&lt;/b&gt; — Topology is read from
+                    an existing attribute field (NEXT) that stores the downstream reach ID. Use this
+                    option if the dataset already has a pre-computed topology
+                    field.&lt;/li&gt;&lt;/ul&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;How topology is derived: &lt;b&gt;geometry&lt;/b&gt; (from
+                    polyline endpoints) or &lt;b&gt;fields&lt;/b&gt; (from a NEXT attribute
+                    field).&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="next_field" displayname="Downstream Reach ID Field (NEXT)" type="Optional" direction="Input" datatype="Field" expression="{next_field}">
+				<dialogReference>&lt;p&gt;The field in the river network containing the downstream
+                    reach ID for each reach. Only used when &lt;i&gt;Topology Source&lt;/i&gt; is
+                    set to &lt;b&gt;fields&lt;/b&gt;. The field should be empty or null for outlet
+                    reaches that have no downstream reach.&lt;/p&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;Field containing the downstream reach ID. Used only when
+                    Topology Source is &lt;b&gt;fields&lt;/b&gt;.&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="river_group_field" displayname="River Group / Catchment Field" type="Optional" direction="Input" datatype="Field" expression="{river_group_field}">
+				<dialogReference>&lt;p&gt;Optional. A field in the river network that identifies
+                    which river group or catchment each reach belongs to. When specified together
+                    with &lt;i&gt;River Group ID Value&lt;/i&gt;, the analysis is restricted to
+                    reaches in that group, greatly reducing processing time for large national
+                    datasets.&lt;/p&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;Optional field identifying river group or catchment
+                    membership. Used to filter the analysis to a single group.&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="river_group_id" displayname="River Group ID Value" type="Optional" direction="Input" datatype="String" expression="{river_group_id}">
+				<dialogReference>&lt;p&gt;The value in the &lt;i&gt;River Group / Catchment
+                    Field&lt;/i&gt; that identifies the group to process. Only reaches where the
+                    river group field equals this value are loaded. Leave empty to process all
+                    reaches.&lt;/p&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;Value identifying the river group to process. Leave empty
+                    to process all reaches.&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="topology_tolerance" displayname="Topology Coordinate Tolerance (map units)" type="Optional" direction="Input" datatype="Double" expression="{topology_tolerance}">
+				<dialogReference>&lt;p&gt;The coordinate tolerance used when matching reach
+                    endpoints to build network topology. Two endpoints within this distance are
+                    considered connected. Increase this value if gaps between connected reaches
+                    prevent topology from being built; keep it small to avoid false connections.
+                    Default is 0.001 map units.&lt;/p&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;Coordinate tolerance for matching reach endpoints when
+                    building topology. Default: 0.001 map units.&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="write_upstream_counts" displayname="Write upstream segment count to river network" type="Optional" direction="Input" datatype="Boolean" expression="{write_upstream_counts}">
+				<dialogReference>&lt;p&gt;When checked, an additional field
+                    &lt;b&gt;tot_up_segments&lt;/b&gt; is written to the river network recording the
+                    total number of upstream reaches above each reach (including reaches behind
+                    barriers). This requires an extra traversal pass and adds time for large
+                    datasets. Default is unchecked.&lt;/p&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;When True, writes the upstream reach count to the
+                    &lt;b&gt;tot_up_segments&lt;/b&gt; field of the river network.&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="edit_workspace" displayname="Edit Session Workspace" type="Optional" direction="Input" datatype="Workspace" expression="{edit_workspace}">
+				<dialogReference>&lt;p&gt;Optional. Full path to the &lt;b&gt;.sde connection
+                    file&lt;/b&gt; or file geodatabase (.gdb) to use as the edit session workspace.
+                    Use this when the tool cannot automatically determine the correct writable
+                    workspace — for example, when a layer is served through an Enterprise connection
+                    that redirects reads to a local offline replica. Leave empty to let the tool
+                    resolve the workspace automatically from the layer&amp;apos;s catalog
+                    path.&lt;/p&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;Full path to the .sde connection file or .gdb to use as
+                    the edit workspace. Leave empty for automatic resolution.&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="debug_sample_n" displayname="Debug: limit to first N reaches" type="Optional" direction="Input" datatype="Long" expression="{debug_sample_n}">
+				<dialogReference>&lt;p&gt;For testing only. When set to a value greater than zero,
+                    only the first &lt;i&gt;N&lt;/i&gt; reaches are loaded during the topology build
+                    step. This allows fast test runs on a small subset of the data to verify tool
+                    configuration before committing to a full-dataset run. Set to
+                    &lt;b&gt;0&lt;/b&gt; (default) to process all reaches.&lt;/p&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;Limit topology to the first N reaches for debugging. Set
+                    to 0 to process all reaches (default).&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="out_river_network" displayname="Updated River Network" type="Derived" direction="Output" datatype="Feature Layer" expression="out_river_network">
+				<dialogReference>&lt;p&gt;The river network feature class after the tool writes
+                    accessibility results. The following fields are
+                    updated:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;b&gt;is_accessible&lt;/b&gt; — 1 if
+                    the reach is accessible from a tidal outlet without crossing a barrier, 0
+                    otherwise.&lt;/li&gt;&lt;li&gt;&lt;b&gt;is_first_barrier_reach&lt;/b&gt; — 1 if
+                    the reach carries the first impassable barrier upstream from the tidal limit, 0
+                    otherwise.&lt;/li&gt;&lt;li&gt;&lt;b&gt;is_accessible_update&lt;/b&gt; — Records
+                    the result of the most recent run (same value as
+                    is_accessible).&lt;/li&gt;&lt;/ul&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;The river network feature class with accessibility and
+                    first-barrier-reach flags written to it.&lt;/p&gt;</pythonReference>
+			</param>
+			<param name="out_barriers" displayname="Updated Barriers" type="Derived" direction="Output" datatype="Feature Layer" expression="out_barriers">
+				<dialogReference>&lt;p&gt;The barriers feature class after the tool writes
+                    first-barrier results. The following fields are
+                    updated:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;b&gt;is_first_barrier&lt;/b&gt; — 1 if
+                    the barrier is the first (lowest) impassable barrier on its reach branch, 0
+                    otherwise.&lt;/li&gt;&lt;li&gt;&lt;b&gt;snapped_reach_id&lt;/b&gt; — The reach
+                    ID to which the barrier was snapped; empty if the barrier was not within snap
+                    distance of any reach.&lt;/li&gt;&lt;/ul&gt;</dialogReference>
+				<pythonReference>&lt;p&gt;The barriers feature class with first-barrier flag and
+                    snapped reach ID written to it.&lt;/p&gt;</pythonReference>
+			</param>
+		</parameters>
+		<summary>Identifies accessible river reaches and the first impassable barrier upstream from
+            each tidal outlet in a digital river network. A breadth-first search (BFS) is performed
+            from each outlet reach upstream until an impassable barrier is encountered. Results are
+            written directly to the geodatabase: accessibility flags on the river network and
+            first-barrier flags on the barriers feature class. No Trace Network or Network Analyst
+            licence is required.</summary>
+		<usage>Configure the river network and barriers inputs, then run the tool. Five steps are
+            performed: (1) network topology is built from geometry or attribute fields; (2) barrier
+            points are snapped to the nearest reach vertex; (3) the first (lowest) barrier per reach
+            is selected; (4) a BFS traversal from each tidal outlet upstream identifies accessible
+            reaches and first-barrier reaches; (5) results are written to the geodatabase. For large
+            national datasets, use the River Group Field and River Group ID Value parameters to
+            restrict the analysis to one catchment at a time.</usage>
+	</tool>
+	<dataIdInfo>
+		<idAbs>Identifies accessible river reaches and the first impassable barrier upstream from
+            each tidal outlet in a digital river network. A breadth-first search (BFS) is performed
+            from each outlet reach upstream until an impassable barrier is encountered. Results are
+            written directly to the geodatabase: two fields (is_accessible, is_first_barrier_reach)
+            on the river network and two fields (is_first_barrier, snapped_reach_id) on the barriers
+            feature class. No Trace Network or Network Analyst licence is required.</idAbs>
+		<idCitation>
+			<resTitle>Identify First Barriers</resTitle>
+		</idCitation>
+		<idPurp>Identify river reaches accessible from the sea and the first impassable barrier
+            upstream from each tidal outlet.</idPurp>
+		<searchKeys>
+			<keyword>river</keyword>
+			<keyword>barrier</keyword>
+			<keyword>accessibility</keyword>
+			<keyword>BFS</keyword>
+			<keyword>graph traversal</keyword>
+			<keyword>fish passage</keyword>
+		</searchKeys>
+	</dataIdInfo>
+	<distInfo>
+		<distributor>
+			<distorFormat>
+				<formatName>ArcToolbox Tool</formatName>
+			</distorFormat>
+		</distributor>
+	</distInfo>
+</metadata>
